@@ -1,0 +1,188 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//////////////////////////////////////
+// ENUMS
+//////////////////////////////////////
+
+enum Role {
+  FARMER
+  BUYER
+  ADMIN
+}
+
+enum ProductStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
+  OUT_OF_STOCK
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum ActivityType {
+  USER_LOGIN
+  PRODUCT_CREATED
+  PRODUCT_UPDATED
+  ORDER_PLACED
+  ORDER_STATUS_CHANGED
+  PREDICTION_REQUESTED
+}
+
+//////////////////////////////////////
+// USER MODEL
+//////////////////////////////////////
+
+model User {
+  id              String        @id @default(uuid())
+  name            String
+  email           String        @unique
+  password        String
+  role            Role          @default(BUYER)
+  phone           String?
+  avatarUrl       String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  lastLoginAt     DateTime?
+  lastLoginAtIST  String?
+  resetToken      String?
+  resetTokenExpiry DateTime?
+
+  farmerProducts  Product[]     @relation("FarmerProducts")
+  buyerOrders     Order[]       @relation("BuyerOrders")
+  activityLogs    ActivityLog[]
+  predictions     Prediction[]
+
+  @@index([email])
+  @@index([role])
+}
+
+//////////////////////////////////////
+// PRODUCT MODEL
+//////////////////////////////////////
+
+model Product {
+  id             String          @id @default(uuid())
+  title          String
+  description    String?
+  category       String
+  unit           String
+  quantity       Float
+  price          Float
+  minimumOrder   Float?
+  status         ProductStatus   @default(AVAILABLE)
+  farmerId       String
+  farmer         User            @relation("FarmerProducts", fields: [farmerId], references: [id])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  images         ProductImage[]
+  priceHistory   PriceHistory[]
+  orders         Order[]
+  predictions    Prediction[]
+  activityLogs   ActivityLog[]   @relation("ProductActivityLogs")
+
+  @@index([category])
+  @@index([status])
+  @@index([farmerId])
+}
+
+model ProductImage {
+  id        String  @id @default(uuid())
+  url       String
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id             String       @id @default(uuid())
+  productId      String
+  buyerId        String
+  quantity       Float
+  totalPrice     Float
+  status         OrderStatus  @default(PENDING)
+  shippingAddress String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  product        Product      @relation(fields: [productId], references: [id])
+  buyer          User         @relation("BuyerOrders", fields: [buyerId], references: [id])
+  activityLogs   ActivityLog[] @relation("OrderActivityLogs")
+
+  @@index([buyerId])
+  @@index([status])
+}
+
+//////////////////////////////////////
+// PRICE HISTORY
+//////////////////////////////////////
+
+model PriceHistory {
+  id             String   @id @default(uuid())
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id])
+  price          Float
+  predictedPrice Float?
+  demandLevel    Float?
+  recordedAt     DateTime @default(now())
+
+  @@index([productId])
+  @@index([recordedAt])
+}
+
+//////////////////////////////////////
+// ACTIVITY LOG (FOR DEMAND ANALYTICS)
+//////////////////////////////////////
+
+model ActivityLog {
+  id         String        @id @default(uuid())
+  userId     String
+  type       ActivityType
+  description String
+  metadata   Json?
+  createdAt  DateTime      @default(now())
+  productId  String?
+  orderId    String?
+
+  user       User          @relation(fields: [userId], references: [id])
+  product    Product?      @relation("ProductActivityLogs", fields: [productId], references: [id])
+  order      Order?        @relation("OrderActivityLogs", fields: [orderId], references: [id])
+
+  @@index([userId, createdAt])
+}
+
+//////////////////////////////////////
+// ML PREDICTIONS
+//////////////////////////////////////
+
+model Prediction {
+  id             String    @id @default(uuid())
+  userId         String
+  productId      String?
+  productName    String
+  predictedPrice Float
+  confidence     Float?
+  modelUsed      String
+  insights       Json?
+  recommendations Json?
+  createdAt      DateTime  @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@index([userId])
+  @@index([productId])
+}
