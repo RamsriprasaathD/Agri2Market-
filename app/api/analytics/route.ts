@@ -92,26 +92,51 @@ async function getFarmerAnalytics(farmerId: string) {
     }),
   ]);
 
+  const topProductsWithRevenue = await prisma.order.groupBy({
+    by: ['productId'],
+    where: {
+      status: OrderStatus.DELIVERED,
+      product: { farmerId },
+    },
+    _sum: { totalPrice: true },
+    orderBy: {
+      _sum: { totalPrice: 'desc' },
+    },
+    take: 5,
+  });
+
+  const topProductIds = topProductsWithRevenue.map((item) => item.productId);
+
   const topProducts = await prisma.product.findMany({
-    where: { farmerId },
+    where: { id: { in: topProductIds } },
     include: {
       orders: {
         where: { status: OrderStatus.DELIVERED },
       },
     },
-    orderBy: {
-      orders: {
-        _sum: { totalPrice: 'desc' },
-      },
-    },
-    take: 5,
   });
+
+  const topProductsByRevenue = topProductIds
+    .map((productId) => {
+      const product = topProducts.find((item) => item.id === productId);
+      const revenue = topProductsWithRevenue.find((item) => item.productId === productId)?._sum.totalPrice ?? 0;
+
+      if (!product) {
+        return null;
+      }
+
+      return {
+        ...product,
+        revenue,
+      };
+    })
+    .filter(Boolean);
 
   return {
     totalRevenue: totalRevenue._sum?.totalPrice ?? 0,
     totalOrders,
     totalProducts,
-    topProducts,
+    topProducts: topProductsByRevenue,
   };
 }
 

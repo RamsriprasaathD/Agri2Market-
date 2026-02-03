@@ -35,10 +35,12 @@ const orderSelect = {
   },
 } as const;
 
-export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await context.params;
+
     const productRecord = await prisma.product.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: baseInclude,
     });
 

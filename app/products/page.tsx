@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
@@ -35,9 +35,17 @@ interface ProductCard {
   }>;
 }
 
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-sand-50 px-4 py-12 text-center text-sm text-emerald-800">Loading marketplace…</div>}>
+      <ProductsPageContent />
+    </Suspense>
+  );
+}
+
 const categories = ['Sunflower', 'Groundnut', 'Mustard', 'Coconut', 'Sesame'];
 
-export default function ProductsPage() {
+function ProductsPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [products, setProducts] = useState<ProductCard[]>([]);

@@ -63,24 +63,25 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const include = scope === 'farmer'
-      ? {
-          ...baseInclude,
-          orders: {
-            select: {
-              id: true,
-              status: true,
-              totalPrice: true,
-              createdAt: true,
-              buyer: {
-                select: { id: true, name: true, email: true },
-              },
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 5,
+    const farmerInclude = Prisma.validator<Prisma.ProductInclude>()({
+      farmer: baseInclude.farmer,
+      images: baseInclude.images,
+      orders: {
+        select: {
+          id: true,
+          status: true,
+          totalPrice: true,
+          createdAt: true,
+          buyer: {
+            select: { id: true, name: true, email: true },
           },
-        }
-      : baseInclude;
+        },
+        orderBy: { createdAt: 'desc' as const },
+        take: 5,
+      },
+    });
+
+    const include = scope === 'farmer' ? farmerInclude : baseInclude;
 
     const products = await prisma.product.findMany({
       where,
