@@ -128,8 +128,10 @@ export async function recordLogin(userId: string) {
   return { lastLoginAt: now, lastLoginAtIST };
 }
 
-export async function ensureAdminUser() {
+const DEFAULT_ADMIN_EMAIL = 'ramsriprasaath@gmail.com';
+const DEFAULT_ADMIN_PASSWORD = 'Ramsri@2006';
 
+export async function ensureAdminUser() {
   const adminEmail = (process.env.ADMIN_EMAIL ?? DEFAULT_ADMIN_EMAIL).toLowerCase();
   const adminPassword = process.env.ADMIN_PASSWORD ?? DEFAULT_ADMIN_PASSWORD;
 
